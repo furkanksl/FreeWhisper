@@ -12,6 +12,7 @@ class PermissionsManager: ObservableObject {
     @Published var isAccessibilityPermissionGranted = false
 
     private var permissionCheckTimer: Timer?
+    private var lastAccessibilityStatus = false
 
     init() {
         checkMicrophonePermission()
@@ -24,6 +25,14 @@ class PermissionsManager: ObservableObject {
             name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
             object: nil
         )
+        
+        // Also observe when app becomes active
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
 
         // Start continuous permission checking
         startPermissionChecking()
@@ -32,6 +41,7 @@ class PermissionsManager: ObservableObject {
     deinit {
         stopPermissionChecking()
         NSWorkspace.shared.notificationCenter.removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
     }
 
     private func startPermissionChecking() {
@@ -61,14 +71,37 @@ class PermissionsManager: ObservableObject {
     }
 
     func checkAccessibilityPermission() {
+        // First check with standard API
         let granted = AXIsProcessTrusted()
-        DispatchQueue.main.async { [weak self] in
-            self?.isAccessibilityPermissionGranted = granted
+        
+        // Try to perform a simple accessibility operation as a secondary check
+        var canPerformAccessibilityOperations = false
+        if granted {
+            // Try to get the focused element as a test
+            if let systemWideElement = AXUIElementCreateSystemWide() as AXUIElement? {
+                var focusedElement: AnyObject?
+                let result = AXUIElementCopyAttributeValue(
+                    systemWideElement,
+                    kAXFocusedUIElementAttribute as CFString,
+                    &focusedElement
+                )
+                
+                // If we can get the focused element, we have proper accessibility permissions
+                canPerformAccessibilityOperations = (result == .success)
+            }
+        }
+        
+        // Only update if there's a change to avoid unnecessary UI updates
+        let newStatus = granted && canPerformAccessibilityOperations
+        if newStatus != lastAccessibilityStatus {
+            lastAccessibilityStatus = newStatus
+            DispatchQueue.main.async { [weak self] in
+                self?.isAccessibilityPermissionGranted = newStatus
+            }
         }
     }
 
     func requestMicrophonePermissionOrOpenSystemPreferences() {
-
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
 
         switch status {
@@ -88,6 +121,15 @@ class PermissionsManager: ObservableObject {
     @objc private func accessibilityPermissionChanged() {
         checkAccessibilityPermission()
     }
+    
+    @objc private func applicationDidBecomeActive() {
+        // Force a fresh check of permissions when app becomes active
+        checkMicrophonePermission()
+        
+        // Reset last status to force update
+        lastAccessibilityStatus = false
+        checkAccessibilityPermission()
+    }
 
     func openSystemPreferences(for permission: Permission) {
         let urlString: String
@@ -103,6 +145,19 @@ class PermissionsManager: ObservableObject {
             DispatchQueue.main.async {
                 NSWorkspace.shared.open(url)
             }
+        }
+    }
+    
+    // Call this to force the app to restart and refresh permissions
+    func restartAppToRefreshPermissions() {
+        let task = Process()
+        task.launchPath = "/usr/bin/open"
+        task.arguments = ["-n", Bundle.main.bundlePath]
+        try? task.run()
+        
+        // Give the new instance time to start before quitting this one
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            NSApp.terminate(nil)
         }
     }
 }
