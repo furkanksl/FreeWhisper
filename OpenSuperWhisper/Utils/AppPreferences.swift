@@ -65,4 +65,14 @@ final class AppPreferences {
     
     @UserDefault(key: "hasCompletedOnboarding", defaultValue: false)
     var hasCompletedOnboarding: Bool
+
+    // Indicator window position
+    @UserDefault(key: "indicatorWindowPositionX", defaultValue: -1.0)
+    var indicatorWindowPositionX: Double
+
+    @UserDefault(key: "indicatorWindowPositionY", defaultValue: -1.0)
+    var indicatorWindowPositionY: Double
+
+    @UserDefault(key: "shouldPositionNearNotch", defaultValue: true)
+    var shouldPositionNearNotch: Bool
 }
