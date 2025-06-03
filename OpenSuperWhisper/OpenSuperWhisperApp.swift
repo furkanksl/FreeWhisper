@@ -23,7 +23,7 @@ struct OpenSuperWhisperApp: App {
                     ContentView()
                 }
             }
-            .frame(width: 450, height: 650)
+            .frame(width: 800, height: 700)
             .environmentObject(appState)
         }
         .windowStyle(.hiddenTitleBar)
@@ -57,6 +57,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var mainWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Initialize IndicatorWindowManager to ensure proper positioning
+        IndicatorWindowManager.shared.initialize()
         
         setupStatusBarItem()
         
