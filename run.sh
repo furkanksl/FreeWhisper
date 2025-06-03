@@ -1,42 +1,53 @@
-#!/bin/zsh
+#!/bin/bash
 
-JUST_BUILD=false
-if [[ "$1" == "build" ]]; then
-    JUST_BUILD=true
-fi
+# Set the scheme name and configuration
+SCHEME="FreeWhisper"
+CONFIGURATION="Debug"
 
-# Configure libwhisper
-echo "Configuring libwhisper..."
-cmake -G Xcode -B libwhisper/build -S libwhisper
-if [[ $? -ne 0 ]]; then
-    echo "CMake configuration failed!"
+# Set build directory relative to script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="$SCRIPT_DIR/Build"
+
+# Clean up previous builds
+echo "Cleaning up previous builds..."
+rm -rf "$BUILD_DIR"
+
+# First, resolve package dependencies
+echo "Resolving Swift Package Manager dependencies..."
+xcodebuild -resolvePackageDependencies -scheme "$SCHEME" -quiet
+
+if [ $? -ne 0 ]; then
+    echo "Failed to resolve package dependencies"
     exit 1
 fi
 
-# Build the app
-echo "Building OpenSuperWhisper..."
-BUILD_OUTPUT=$(xcodebuild -scheme OpenSuperWhisper -configuration Debug -jobs 8 -derivedDataPath build -quiet -destination 'platform=macOS,arch=arm64' -skipPackagePluginValidation -skipMacroValidation -UseModernBuildSystem=YES -clonedSourcePackagesDirPath SourcePackages -skipUnavailableActions CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO OTHER_CODE_SIGN_FLAGS="--entitlements OpenSuperWhisper/OpenSuperWhisper.entitlements" build 2>&1)
+echo "Package dependencies resolved successfully!"
 
-# sudo gem install xcpretty
-if command -v xcpretty &> /dev/null
-then
-    echo "$BUILD_OUTPUT" | xcpretty --simple --color
-else
+# Build the project with simplified parameters
+echo "Building FreeWhisper..."
+BUILD_OUTPUT=$(xcodebuild -scheme "$SCHEME" -configuration "$CONFIGURATION" -destination 'platform=macOS,arch=arm64' -derivedDataPath ./Build build 2>&1)
+
+if [ $? -ne 0 ]; then
+    echo "Build failed:"
     echo "$BUILD_OUTPUT"
+    exit 1
 fi
 
-# Check if build output contains BUILD FAILED or if the command failed
-if [[ $? -eq 0 ]] && [[ ! "$BUILD_OUTPUT" =~ "BUILD FAILED" ]]; then
-    echo "Building successful!"
-    if $JUST_BUILD; then
-        exit 0
-    fi
-    echo "Starting the app..."
-    # Remove quarantine attribute if exists
-    xattr -d com.apple.quarantine ./Build/Build/Products/Debug/OpenSuperWhisper.app 2>/dev/null || true
-    # Run the app and show logs
-    ./Build/Build/Products/Debug/OpenSuperWhisper.app/Contents/MacOS/OpenSuperWhisper
-else
-    echo "Build failed!"
+echo "Build succeeded!"
+
+# Find the built app
+APP_PATH=$(find ./Build -name "FreeWhisper.app" -type d | head -1)
+
+if [ -z "$APP_PATH" ]; then
+    echo "Error: FreeWhisper.app not found in build directory"
+    echo "Looking for app in build directory..."
+    find ./Build -name "*.app" -type d
     exit 1
 fi 
+
+echo "Found app at: $APP_PATH"
+echo "Removing extended attributes..."
+xattr -d com.apple.quarantine "$APP_PATH" 2>/dev/null || true
+
+echo "Launching FreeWhisper..."
+"$APP_PATH/Contents/MacOS/FreeWhisper" 

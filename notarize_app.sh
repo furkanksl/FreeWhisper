@@ -2,10 +2,10 @@
 set -e
 
 # === Configuration Variables ===
-APP_NAME="OpenSuperWhisper"                                   
-APP_PATH="./build/Build/Products/Release/OpenSuperWhisper.app"                        
-ZIP_PATH="./build/OpenSuperWhisper.zip"                        
-BUNDLE_ID="ru.starmel.OpenSuperWhisper"                       
+APP_NAME="FreeWhisper"                                   
+APP_PATH="./build/Build/Products/Release/FreeWhisper.app"                        
+ZIP_PATH="./build/FreeWhisper.zip"                        
+BUNDLE_ID="com.furkanksl.FreeWhisper"                       
 KEYCHAIN_PROFILE="Slava"
 CODE_SIGN_IDENTITY="${1}"
 DEVELOPMENT_TEAM="8LLDD7HWZK"
@@ -16,7 +16,7 @@ cmake -G Xcode -B libwhisper/build -S libwhisper
 rm -rf build
 
 xcodebuild \
-  -scheme "OpenSuperWhisper" \
+  -scheme "FreeWhisper" \
   -configuration Release \
   -destination "platform=macOS,arch=arm64" \
   CODE_SIGN_STYLE=Manual \
