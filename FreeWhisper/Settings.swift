@@ -1,3 +1,10 @@
+//
+//  Settings.swift
+//  FreeWhisper
+//
+//  Created by user on 08.02.2025.
+//
+
 import AppKit
 import Carbon
 import Combine
@@ -159,7 +166,7 @@ struct SettingsView: View {
                 }
             )
         }
-        .frame(width: 800, height: 600)
+        .frame(width: 800, height: 700)
         .onAppear {
             previousModelURL = viewModel.selectedModelURL
         }
@@ -202,7 +209,7 @@ struct SettingsSidebar: View {
                     .font(.system(size: 32, weight: .medium))
                     .foregroundStyle(.linearGradient(colors: [.gray], startPoint: .topLeading, endPoint: .bottomTrailing))
                 
-                Text("OpenSuperWhisper")
+                Text("FreeWhisper")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
                 

@@ -1,6 +1,6 @@
 //
-//  OpenSuperWhisperApp.swift
-//  OpenSuperWhisper
+//  FreeWhisperApp.swift
+//  FreeWhisper
 //
 //  Created by user on 05.02.2025.
 //
@@ -10,7 +10,7 @@ import SwiftUI
 import AppKit
 
 @main
-struct OpenSuperWhisperApp: App {
+struct FreeWhisperApp: App {
     @StateObject private var appState = AppState()
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
@@ -74,11 +74,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         
         if let button = statusItem?.button {
             if let iconImage = NSImage(named: "tray_icon") {
-                iconImage.size = NSSize(width: 48, height: 48)
-                iconImage.isTemplate = true
+                iconImage.size = NSSize(width: 22, height: 22)
+                iconImage.isTemplate = false
                 button.image = iconImage
             } else {
-                button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "OpenSuperWhisper")
+                button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "FreeWhisper")
             }
             
             button.action = #selector(statusBarButtonClicked(_:))
@@ -87,7 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         
         let menu = NSMenu()
         
-        menu.addItem(NSMenuItem(title: "OpenSuperWhisper", action: #selector(openApp), keyEquivalent: "o"))
+        menu.addItem(NSMenuItem(title: "FreeWhisper", action: #selector(openApp), keyEquivalent: "o"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
         
@@ -116,7 +116,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             window.orderFrontRegardless()
             NSApplication.shared.activate(ignoringOtherApps: true)
         } else {
-            let url = URL(string: "openSuperWhisper://openMainWindow")!
+            let url = URL(string: "freeWhisper://openMainWindow")!
             NSWorkspace.shared.open(url)
         }
     }

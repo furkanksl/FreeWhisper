@@ -1,13 +1,13 @@
 //
-//  OpenSuperWhisperUITestsLaunchTests.swift
-//  OpenSuperWhisperUITests
+//  FreeWhisperUITestsLaunchTests.swift
+//  FreeWhisperUITests
 //
 //  Created by user on 05.02.2025.
 //
 
 import XCTest
 
-final class OpenSuperWhisperUITestsLaunchTests: XCTestCase {
+final class FreeWhisperUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
@@ -22,8 +22,8 @@ final class OpenSuperWhisperUITestsLaunchTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        // Insert steps here to perform after app launch but before taking a screenshot,
-        // such as logging into a test account or navigating somewhere in the app
+        // Insert steps here to perform after app launch but before taking a screenshot.
+        // For example, logging into a test account or navigating somewhere in the app
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"

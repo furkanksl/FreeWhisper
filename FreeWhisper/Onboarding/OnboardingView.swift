@@ -1,6 +1,6 @@
 //
 //  OnboardingView.swift
-//  OpenSuperWhisper
+//  FreeWhisper
 //
 //  Created by user on 08.02.2025.
 //
@@ -146,7 +146,7 @@ struct OnboardingView: View {
                 )
             }
         }
-        .frame(width: 600, height: 700)
+        .frame(width: 800, height: 700)
         .opacity(isVisible ? 1 : 0)
         .scaleEffect(isVisible ? 1 : 0.95)
         .onAppear {
@@ -291,7 +291,7 @@ struct WelcomeStepView: View {
                 .opacity(animateElements ? 1 : 0)
                 .animation(.easeInOut(duration: 0.6).delay(0.4), value: animateElements)
             
-            Text("OpenSuperWhisper")
+            Text("FreeWhisper")
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(.linearGradient(colors: [.primary, .secondary], startPoint: .leading, endPoint: .trailing))
                 .opacity(animateElements ? 1 : 0)
@@ -376,14 +376,14 @@ struct LanguageStepView: View {
             
             Spacer()
             
-            Picker("Language", selection: $viewModel.selectedLanguage) {
+            Picker("", selection: $viewModel.selectedLanguage) {
                 ForEach(LanguageUtil.availableLanguages, id: \.self) { code in
                     Text(LanguageUtil.languageNames[code] ?? code)
                         .tag(code)
                 }
             }
             .pickerStyle(.menu)
-            .frame(minWidth: 120)
+            .frame(minWidth: 120, maxWidth: 120)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -395,6 +395,7 @@ struct LanguageStepView: View {
                         .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                 )
         )
+        .frame(width: 320)
     }
 }
 
@@ -439,7 +440,7 @@ struct ModelStepView: View {
                 .padding(.horizontal, 40)
                 .padding(.top, 32)
             }
-            .frame(maxHeight: 280) // Constrain height to prevent covering buttons
+            .frame(maxHeight: 360) // Constrain height to prevent covering buttons
             
             Spacer()
         }
@@ -506,7 +507,7 @@ struct CompactModelCard: View {
     private var recommendedBadge: some View {
         Text("RECOMMENDED")
             .font(.system(size: 9, weight: .bold))
-            .foregroundColor(.white)
+            .foregroundColor(.black)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(
@@ -610,7 +611,7 @@ struct OnboardingHeader: View {
     }
     
     private var headerText: some View {
-        Text("Setup OpenSuperWhisper")
+        Text("Setup FreeWhisper")
             .font(.system(size: 16, weight: .medium))
             .foregroundColor(.secondary)
     }

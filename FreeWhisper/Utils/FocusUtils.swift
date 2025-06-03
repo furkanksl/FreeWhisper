@@ -1,6 +1,6 @@
 //
 //  FocusUtils.swift
-//  OpenSuperWhisper
+//  FreeWhisper
 //
 //  Created by user on 07.02.2025.
 //

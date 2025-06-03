@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  OpenSuperWhisper
+//  FreeWhisper
 //
 //  Created by user on 05.02.2025.
 //
@@ -181,7 +181,7 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(minWidth: 800, minHeight: 600)
+        .frame(minWidth: 800, minHeight: 700)
         .background(Color(.windowBackgroundColor))
         .overlay {
             if viewModel.transcriptionService.isLoading && 
@@ -917,7 +917,7 @@ struct WelcomeHeader: View {
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
             
             VStack(spacing: 8) {
-                Text("Welcome to OpenSuperWhisper")
+                Text("Welcome to FreeWhisper")
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
                 
