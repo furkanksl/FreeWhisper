@@ -26,7 +26,7 @@ Free alternative to paid services like:
 
 ## Installation
 
-### Homebrew (Recommended)
+### Homebrew (coming soon)
 
 ```bash
 brew install freewhisper
