@@ -30,7 +30,7 @@ Free alternative to paid services like:
 brew install freewhisper
 ```
 
-Or from [github releases page](https://github.com/Starmel/FreeWhisper/releases).
+Or from [github releases page](https://github.com/furkanksl/FreeWhisper/releases).
 
 ## Usage
 
@@ -56,7 +56,7 @@ Or from [github releases page](https://github.com/Starmel/FreeWhisper/releases).
 ## Building from Source
 
 ```bash
-git clone https://github.com/Starmel/FreeWhisper.git
+git clone https://github.com/furkanksl/FreeWhisper.git
 cd FreeWhisper
 xcodebuild -scheme FreeWhisper -configuration Release
 ```
