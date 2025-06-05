@@ -12,5 +12,20 @@
 	<string>FreeWhisper needs accessibility access to provide system-wide functionality.</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>FreeWhisper needs accessibility access to provide system-wide functionality.</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>LSBackgroundOnly</key>
+	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.furkanksl.FreeWhisper</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>freeWhisper</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

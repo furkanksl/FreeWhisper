@@ -75,4 +75,11 @@ final class AppPreferences {
 
     @UserDefault(key: "shouldPositionNearNotch", defaultValue: true)
     var shouldPositionNearNotch: Bool
+    
+    // App behavior settings
+    @UserDefault(key: "startAtLogin", defaultValue: false)
+    var startAtLogin: Bool
+    
+    @UserDefault(key: "hideMainWindowOnReopen", defaultValue: true)
+    var hideMainWindowOnReopen: Bool
 }

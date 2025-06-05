@@ -55,18 +55,58 @@ class AppState: ObservableObject {
 class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var statusItem: NSStatusItem?
     private var mainWindow: NSWindow?
+    private var isExplicitlyOpened = false // Track if window was explicitly opened by user
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize IndicatorWindowManager to ensure proper positioning
         IndicatorWindowManager.shared.initialize()
         
+        // Sync login item status with preferences
+        LoginItemManager.shared.syncLoginItemWithPreference()
+        
         setupStatusBarItem()
         
+        // Check if we should hide the window on startup
+        let prefs = AppPreferences.shared
+        let shouldHideWindow = prefs.hasCompletedOnboarding && 
+                              prefs.selectedModelPath != nil && 
+                              prefs.hideMainWindowOnReopen
+        
+        // Set app to accessory mode immediately if needed
+        if shouldHideWindow {
+            NSApplication.shared.setActivationPolicy(.accessory)
+            print("Window hidden on launch based on user preference")
+        }
+        
+        // Store window reference after setting activation policy
         if let window = NSApplication.shared.windows.first {
             self.mainWindow = window
-            
             window.delegate = self
+            
+            // If we need to hide the window, make sure it's not visible
+            if shouldHideWindow {
+                window.orderOut(nil)
+            }
         }
+    }
+    
+    func applicationDidBecomeActive(_ notification: Notification) {
+        // Only check window visibility if it wasn't explicitly opened by the user
+        if !isExplicitlyOpened {
+            let prefs = AppPreferences.shared
+            let shouldHideWindow = prefs.hasCompletedOnboarding && 
+                                  prefs.selectedModelPath != nil && 
+                                  prefs.hideMainWindowOnReopen
+            
+            if shouldHideWindow {
+                // Make sure we're in accessory mode and window is hidden
+                NSApplication.shared.setActivationPolicy(.accessory)
+                mainWindow?.orderOut(nil)
+            }
+        }
+        
+        // Reset the flag after handling the activation
+        isExplicitlyOpened = false
     }
     
     private func setupStatusBarItem() {
@@ -99,6 +139,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
     
     @objc private func openApp() {
+        // Set flag before showing window
+        isExplicitlyOpened = true
         showMainWindow()
     }
     
@@ -107,6 +149,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
     
     func showMainWindow() {
+        // Set flag to indicate explicit user action
+        isExplicitlyOpened = true
+        
+        // Always show the window when explicitly requested
         NSApplication.shared.setActivationPolicy(.regular)
         
         if let window = mainWindow {

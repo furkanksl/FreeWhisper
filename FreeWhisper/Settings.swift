@@ -88,6 +88,19 @@ class SettingsViewModel: ObservableObject {
         }
     }
     
+    // New app behavior settings
+    @Published var startAtLogin: Bool {
+        didSet {
+            LoginItemManager.shared.setStartAtLogin(startAtLogin)
+        }
+    }
+    
+    @Published var hideMainWindowOnReopen: Bool {
+        didSet {
+            AppPreferences.shared.hideMainWindowOnReopen = hideMainWindowOnReopen
+        }
+    }
+    
     init() {
         let prefs = AppPreferences.shared
         self.selectedLanguage = prefs.whisperLanguage
@@ -101,6 +114,8 @@ class SettingsViewModel: ObservableObject {
         self.beamSize = prefs.beamSize
         self.debugMode = prefs.debugMode
         self.playSoundOnRecordStart = prefs.playSoundOnRecordStart
+        self.startAtLogin = prefs.startAtLogin
+        self.hideMainWindowOnReopen = prefs.hideMainWindowOnReopen
         
         if let savedPath = prefs.selectedModelPath {
             self.selectedModelURL = URL(fileURLWithPath: savedPath)
@@ -241,7 +256,7 @@ struct SettingsSidebar: View {
                     .padding(.horizontal, 16)
                 
                 HStack {
-                    Text("v1.0.0")
+                    Text("v0.0.6")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.secondary)
                     
@@ -582,6 +597,33 @@ struct AdvancedContent: View {
     
     var body: some View {
         VStack(spacing: 20) {
+            // New App Behavior Card
+            GlassCard(
+                title: "App Behavior",
+                subtitle: "Customize startup and window behavior",
+                icon: "gearshape.fill"
+            ) {
+                VStack(spacing: 16) {
+                    SettingRow(
+                        title: "Start at Login",
+                        subtitle: "Launch automatically when you log in",
+                        icon: "arrow.right.circle"
+                    ) {
+                        Toggle("", isOn: $viewModel.startAtLogin)
+                            .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                    }
+                    
+                    SettingRow(
+                        title: "Hide Window on Reopen",
+                        subtitle: "After setup, keep app in menu bar only",
+                        icon: "eye.slash"
+                    ) {
+                        Toggle("", isOn: $viewModel.hideMainWindowOnReopen)
+                            .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                    }
+                }
+            }
+            
             GlassCard(
                 title: "Processing Strategy",
                 subtitle: "Control transcription behavior",
