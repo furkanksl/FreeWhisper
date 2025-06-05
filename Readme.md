@@ -5,7 +5,9 @@ FreeWhisper is a macOS application that provides real-time audio transcription u
 > **Note:** FreeWhisper is a fork of [OpenSuperWhisper](https://github.com/Starmel/OpenSuperWhisper). We've renamed and continued development of this excellent open-source project to provide a free alternative to paid transcription services.
 
 <p align="center">
-<img src="docs/image.png" width="400" /> <img src="docs/image_indicator.png" width="400" />
+    <img src="docs/website.png" width="800" />
+</p>
+<p align="center"> <img src="docs/image_indicator.png" width="400" />
 </p>
 
 Free alternative to paid services like:
