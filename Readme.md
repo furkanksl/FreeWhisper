@@ -26,13 +26,7 @@ Free alternative to paid services like:
 
 ## Installation
 
-### Homebrew (coming soon)
-
-```bash
-brew install freewhisper
-```
-
-Or from [github releases page](https://github.com/furkanksl/FreeWhisper/releases).
+[github releases page](https://github.com/furkanksl/FreeWhisper/releases).
 
 ## Usage
 
