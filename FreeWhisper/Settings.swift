@@ -263,7 +263,7 @@ struct SettingsSidebar: View {
                     .padding(.horizontal, 16)
                 
                 HStack {
-                    Text("v0.0.6")
+                    Text("v0.0.7")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.secondary)
                     

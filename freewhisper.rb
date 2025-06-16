@@ -1,5 +1,5 @@
 cask "freewhisper" do
-    version "0.0.6"
+    version "0.0.7"
     sha256 "da42224ee30b20e528ff8ef728e768dee4879f173d7004c6ead2274140569269"
   
     url "https://github.com/furkanksl/FreeWhisper/releases/download/#{version}/FreeWhisper.dmg"
