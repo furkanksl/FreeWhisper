@@ -88,6 +88,12 @@ class SettingsViewModel: ObservableObject {
         }
     }
     
+    @Published var muteSystemAudioDuringRecording: Bool {
+        didSet {
+            AppPreferences.shared.muteSystemAudioDuringRecording = muteSystemAudioDuringRecording
+        }
+    }
+    
     // New app behavior settings
     @Published var startAtLogin: Bool {
         didSet {
@@ -114,6 +120,7 @@ class SettingsViewModel: ObservableObject {
         self.beamSize = prefs.beamSize
         self.debugMode = prefs.debugMode
         self.playSoundOnRecordStart = prefs.playSoundOnRecordStart
+        self.muteSystemAudioDuringRecording = prefs.muteSystemAudioDuringRecording
         self.startAtLogin = prefs.startAtLogin
         self.hideMainWindowOnReopen = prefs.hideMainWindowOnReopen
         
@@ -433,6 +440,15 @@ struct ShortcutsContent: View {
                         icon: "speaker.wave.2"
                     ) {
                         Toggle("", isOn: $viewModel.playSoundOnRecordStart)
+                            .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                    }
+                    
+                    SettingRow(
+                        title: "Mute System Audio",
+                        subtitle: "Silence computer audio during recording",
+                        icon: "speaker.slash.fill"
+                    ) {
+                        Toggle("", isOn: $viewModel.muteSystemAudioDuringRecording)
                             .toggleStyle(SwitchToggleStyle(tint: .accentColor))
                     }
                 }

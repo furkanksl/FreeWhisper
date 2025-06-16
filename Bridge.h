@@ -6,3 +6,4 @@
 //
 
 #include "whisper.h"
+#import <CoreAudio/CoreAudio.h>

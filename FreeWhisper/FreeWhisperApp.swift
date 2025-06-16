@@ -56,6 +56,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var statusItem: NSStatusItem?
     private var mainWindow: NSWindow?
     private var isExplicitlyOpened = false // Track if window was explicitly opened by user
+    private var muteSystemAudioMenuItem: NSMenuItem?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize IndicatorWindowManager to ensure proper positioning
@@ -129,9 +130,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         
         menu.addItem(NSMenuItem(title: "FreeWhisper", action: #selector(openApp), keyEquivalent: "o"))
         menu.addItem(NSMenuItem.separator())
+        
+        // Add mute system audio toggle
+        muteSystemAudioMenuItem = NSMenuItem(
+            title: "Mute System Audio During Recording",
+            action: #selector(toggleMuteSystemAudio),
+            keyEquivalent: ""
+        )
+        updateMuteSystemAudioMenuItemState()
+        menu.addItem(muteSystemAudioMenuItem!)
+        
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
         
         statusItem?.menu = menu
+    }
+    
+    private func updateMuteSystemAudioMenuItemState() {
+        muteSystemAudioMenuItem?.state = AppPreferences.shared.muteSystemAudioDuringRecording ? .on : .off
+    }
+    
+    @objc private func toggleMuteSystemAudio() {
+        let prefs = AppPreferences.shared
+        prefs.muteSystemAudioDuringRecording.toggle()
+        updateMuteSystemAudioMenuItemState()
     }
     
     @objc private func statusBarButtonClicked(_ sender: Any) {

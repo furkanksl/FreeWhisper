@@ -15,6 +15,9 @@ class AudioRecorder: NSObject, ObservableObject {
     private let temporaryDirectory: URL
     private var currentRecordingURL: URL?
     private var notificationObserver: Any?
+    
+    // Reference to system audio controller
+    private let systemAudioController = SystemAudioController.shared
 
     // MARK: - Singleton Instance
 
@@ -115,6 +118,11 @@ class AudioRecorder: NSObject, ObservableObject {
             _ = stopRecording()
             // return
         }
+
+        // Mute system audio if the feature is enabled
+        if AppPreferences.shared.muteSystemAudioDuringRecording {
+            systemAudioController.muteSystemAudio()
+        }
         
         if AppPreferences.shared.playSoundOnRecordStart {
             playNotificationSound()
@@ -144,12 +152,22 @@ class AudioRecorder: NSObject, ObservableObject {
         } catch {
             print("Failed to start recording: \(error)")
             currentRecordingURL = nil
+            
+            // Restore system audio if recording failed
+            if AppPreferences.shared.muteSystemAudioDuringRecording {
+                systemAudioController.unmuteSystemAudio()
+            }
         }
     }
     
     func stopRecording() -> URL? {
         audioRecorder?.stop()
         isRecording = false
+        
+        // Restore system audio when recording stops
+        if AppPreferences.shared.muteSystemAudioDuringRecording {
+            systemAudioController.unmuteSystemAudio()
+        }
         
         // Check if recording duration is less than 1 second
         if let url = currentRecordingURL,
@@ -170,6 +188,11 @@ class AudioRecorder: NSObject, ObservableObject {
     func cancelRecording() {
         audioRecorder?.stop()
         isRecording = false
+        
+        // Restore system audio when recording is cancelled
+        if AppPreferences.shared.muteSystemAudioDuringRecording {
+            systemAudioController.unmuteSystemAudio()
+        }
         
         if let url = currentRecordingURL {
             try? FileManager.default.removeItem(at: url)
