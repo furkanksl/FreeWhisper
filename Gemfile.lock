@@ -83,7 +83,7 @@ GEM
       emoji_regex (>= 0.1, < 4.0)
       excon (>= 0.71.0, < 1.0.0)
       faraday (~> 1.0)
-      faraday-cookie_jar (~> 0.0.6)
+      faraday-cookie_jar (~> 0.0.7)
       faraday_middleware (~> 1.0)
       fastimage (>= 2.1.0, < 3.0.0)
       fastlane-sirp (>= 1.0.0)
