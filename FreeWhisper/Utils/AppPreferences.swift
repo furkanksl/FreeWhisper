@@ -86,4 +86,14 @@ final class AppPreferences {
     
     @UserDefault(key: "hideMainWindowOnReopen", defaultValue: true)
     var hideMainWindowOnReopen: Bool
+    
+    // Voice commands settings
+    @UserDefault(key: "voiceCommandsEnabled", defaultValue: true)
+    var voiceCommandsEnabled: Bool
+    
+    @UserDefault(key: "showVoiceCommandFeedback", defaultValue: true)
+    var showVoiceCommandFeedback: Bool
+    
+    @UserDefault(key: "voiceCommandsPreventNormalTranscription", defaultValue: true)
+    var voiceCommandsPreventNormalTranscription: Bool
 }
