@@ -18,6 +18,7 @@ class IndicatorViewModel: ObservableObject {
     @Published var isBlinking = false
     @Published var recorder: AudioRecorder = .shared
     @Published var isVisible = false
+    @Published var voiceCommandProcessor = VoiceCommandProcessor.shared
     
     var delegate: IndicatorViewDelegate?
     private var blinkTimer: Timer?
@@ -57,6 +58,14 @@ class IndicatorViewModel: ObservableObject {
                     print("start decoding...")
                     let text = try await transcription.transcribeAudio(url: tempURL, settings: Settings())
                     
+                    // Check if this is a voice command
+                    let isVoiceCommand = await voiceCommandProcessor.processTranscription(text)
+                    
+                    // If it's a voice command and we're set to prevent normal transcription, don't save it
+                    let shouldSaveTranscription = !isVoiceCommand || !AppPreferences.shared.voiceCommandsPreventNormalTranscription
+                    let shouldInsertText = !isVoiceCommand  // Only insert text if it's not a voice command
+                    
+                    if shouldSaveTranscription {
                     // Create a new Recording instance
                     let timestamp = Date()
                     let fileName = "\(Int(timestamp.timeIntervalSince1970)).wav"
@@ -82,8 +91,16 @@ class IndicatorViewModel: ObservableObject {
                         ))
                     }
                     
+                        if shouldInsertText {
                     insertTextUsingPasteboard(text)
+                        }
+                        
                     print("Transcription result: \(text)")
+                    } else {
+                        // Voice command was executed, clean up the temp file
+                        try? FileManager.default.removeItem(at: tempURL)
+                        print("Voice command executed, transcription not saved")
+                    }
                 } catch {
                     print("Error transcribing audio: \(error)")
                     try? FileManager.default.removeItem(at: tempURL)
@@ -106,6 +123,9 @@ class IndicatorViewModel: ObservableObject {
     }
     
     func insertTextUsingPasteboard(_ text: String) {
+        // First set this as the latest transcription
+        ClipboardUtil.setLatestTranscription(text)
+        // Then insert it using pasteboard
         ClipboardUtil.insertTextUsingPasteboard(text)
     }
     
