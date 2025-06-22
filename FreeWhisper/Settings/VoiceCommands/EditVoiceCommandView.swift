@@ -17,6 +17,7 @@ struct EditVoiceCommandView: View {
     @State private var isLoadingApps = true
     @State private var searchText = ""
     @State private var showDeleteConfirmation = false
+    @State private var capturedShortcut: String = ""
     
     enum ActionType: String, CaseIterable, Identifiable {
         case launchApp = "Launch App"
@@ -30,6 +31,14 @@ struct EditVoiceCommandView: View {
             case .launchApp: return "app.badge"
             case .keyboardShortcut: return "keyboard"
             case .customCommand: return "terminal"
+            }
+        }
+        
+        var description: String {
+            switch self {
+            case .launchApp: return "Open applications with voice"
+            case .keyboardShortcut: return "Trigger keyboard shortcuts"
+            case .customCommand: return "Run shell commands"
             }
         }
     }
@@ -71,6 +80,27 @@ struct EditVoiceCommandView: View {
             _customShellCommand = State(initialValue: "")
             _selectedModifiers = State(initialValue: Set(combo.modifiers))
             _selectedKey = State(initialValue: combo.key)
+            
+            // Initialize the captured shortcut display string
+            let modifierSymbols = combo.modifiers.sorted { $0.rawValue < $1.rawValue }.map { $0.symbol }
+            let modifierString = modifierSymbols.joined()
+            
+            // Map key names to user-friendly symbols for display
+            let displayKey: String
+            switch combo.key.lowercased() {
+            case "left": displayKey = "←"
+            case "right": displayKey = "→"
+            case "up": displayKey = "↑"
+            case "down": displayKey = "↓"
+            case "space": displayKey = "Space"
+            case "return": displayKey = "↩"
+            case "tab": displayKey = "⇥"
+            case "delete": displayKey = "⌫"
+            case "escape": displayKey = "⎋"
+            default: displayKey = combo.key
+            }
+            
+            _capturedShortcut = State(initialValue: modifierString + displayKey)
         }
     }
     
@@ -81,7 +111,7 @@ struct EditVoiceCommandView: View {
         case .launchApp:
             return phraseValid && selectedApp != nil
         case .keyboardShortcut:
-            return phraseValid && !selectedKey.isEmpty && !selectedModifiers.isEmpty
+            return phraseValid && !selectedKey.isEmpty
         case .customCommand:
             return phraseValid && !customShellCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
@@ -122,28 +152,35 @@ struct EditVoiceCommandView: View {
             .padding(.top, 24)
             .padding(.bottom, 16)
             
-            // Status Toggle
+            // Status Toggle Section
             HStack(spacing: 12) {
-                Text("Status:")
-                    .font(.system(size: 14, weight: .medium))
+                Image(systemName: "power")
+                    .font(.system(size: 16))
+                    .foregroundColor(isEnabled ? .green : .gray)
+                    .frame(width: 24, height: 24)
                 
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(isEnabled ? .green : .gray)
-                        .frame(width: 8, height: 8)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Status")
+                        .font(.system(size: 16, weight: .semibold))
                     
-                    Text(isEnabled ? "Active" : "Disabled")
-                        .font(.system(size: 14))
-                        .foregroundColor(isEnabled ? .green : .gray)
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(isEnabled ? .green : .gray)
+                            .frame(width: 8, height: 8)
+                        
+                        Text(isEnabled ? "Active" : "Disabled")
+                            .font(.system(size: 14))
+                            .foregroundColor(isEnabled ? .green : .gray)
+                    }
                 }
                 
                 Spacer()
                 
                 Toggle("", isOn: $isEnabled)
-                    .toggleStyle(ModernToggleStyle())
+                    .toggleStyle(SwitchToggleStyle(tint: .green))
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 16)
+            .padding(.bottom, 24)
             
             // Phrase Input Section
             VStack(alignment: .leading, spacing: 8) {
@@ -169,6 +206,11 @@ struct EditVoiceCommandView: View {
                                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                         )
                 }
+                
+                Text("Example: \"Open Safari\" or \"Copy that\"")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 36)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
@@ -185,7 +227,7 @@ struct EditVoiceCommandView: View {
                 // Modern segmented control
                 HStack(spacing: 8) {
                     ForEach(ActionType.allCases) { type in
-                        ActionTypeButton(
+                        EditCommandActionTypeButton(
                             type: type,
                             isSelected: selectedActionType == type,
                             onSelect: { selectedActionType = type }
@@ -194,7 +236,7 @@ struct EditVoiceCommandView: View {
                 }
                 .padding(.horizontal, 24)
                 
-                // Action configuration
+                // Action configuration - Scrollable content
                 ScrollView {
                     VStack(spacing: 24) {
                         switch selectedActionType {
@@ -209,47 +251,15 @@ struct EditVoiceCommandView: View {
                         case .keyboardShortcut:
                             KeyboardShortcutView(
                                 selectedModifiers: $selectedModifiers,
-                                selectedKey: $selectedKey
+                                selectedKey: $selectedKey,
+                                capturedShortcut: $capturedShortcut
                             )
                             
                         case .customCommand:
                             CustomCommandView(command: $customShellCommand)
                         }
                         
-                        // Action buttons
-                        HStack(spacing: 16) {
-                            Button(action: {
-                                showDeleteConfirmation = true
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "trash")
-                                    Text("Delete")
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(DangerButtonStyle())
-                            .alert("Delete Voice Command", isPresented: $showDeleteConfirmation) {
-                                Button("Cancel", role: .cancel) { }
-                                Button("Delete", role: .destructive) {
-                                    onCommandDeleted(command)
-                                    dismiss()
-                                }
-                            } message: {
-                                Text("Are you sure you want to delete this voice command? This action cannot be undone.")
-                            }
-                            
-                            Button(action: saveCommand) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "checkmark")
-                                    Text("Save Changes")
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(PrimaryButtonStyle())
-                            .disabled(!isFormValid)
-                        }
-                        .padding(.top, 16)
-                        
+                        // Last used info (moved here from buttons section)
                         if let lastUsed = command.lastUsed {
                             HStack {
                                 Image(systemName: "clock")
@@ -261,14 +271,55 @@ struct EditVoiceCommandView: View {
                                 
                                 Spacer()
                             }
-                            .padding(.top, 8)
+                            .padding(.top, 16)
                         }
+                        
+                        // Add some bottom spacing for the fixed buttons
+                        Spacer()
+                            .frame(height: 40)
                     }
                     .padding(24)
                 }
             }
+            
+            // Fixed bottom button area
+            VStack(spacing: 0) {
+                Divider()
+                
+                HStack(spacing: 16) {
+                    Button(action: {
+                        showDeleteConfirmation = true
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "trash")
+                            Text("Delete")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(DangerButtonStyle())
+                    .alert("Delete Voice Command", isPresented: $showDeleteConfirmation) {
+                        Button("Cancel", role: .cancel) { }
+                        Button("Delete", role: .destructive) {
+                            onCommandDeleted(command)
+                            dismiss()
+                        }
+                    } message: {
+                        Text("Are you sure you want to delete this voice command? This action cannot be undone.")
+                    }
+                    
+                    Button(action: saveCommand) {
+                        Text("Save Changes")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(!isFormValid)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
+                .background(Color(.windowBackgroundColor))
+            }
         }
-        .frame(width: 600, height: 600)
+        .frame(width: 600, height: 800)
         .background(Color(.windowBackgroundColor))
         .onAppear {
             loadApps()
@@ -337,7 +388,7 @@ struct EditVoiceCommandView: View {
     }
 }
 
-struct ActionTypeButton: View {
+struct EditCommandActionTypeButton: View {
     let type: EditVoiceCommandView.ActionType
     let isSelected: Bool
     let onSelect: () -> Void
@@ -351,7 +402,7 @@ struct ActionTypeButton: View {
                 Text(type.rawValue)
                     .font(.system(size: 14, weight: .medium))
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 4)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
             .background(

@@ -13,6 +13,7 @@ struct AddVoiceCommandView: View {
     @State private var availableApps: [AppInfo] = []
     @State private var isLoadingApps = true
     @State private var searchText = ""
+    @State private var capturedShortcut = ""
     
     init(onCommandAdded: @escaping (VoiceCommand) -> Void = { _ in }) {
         self.onCommandAdded = onCommandAdded
@@ -159,27 +160,38 @@ struct AddVoiceCommandView: View {
                         case .keyboardShortcut:
                             KeyboardShortcutView(
                                 selectedModifiers: $selectedModifiers,
-                                selectedKey: $selectedKey
+                                selectedKey: $selectedKey,
+                                capturedShortcut: $capturedShortcut
                             )
                             
                         case .customCommand:
                             CustomCommandView(command: $customShellCommand)
                         }
                         
-                        // Save Button
-                        Button(action: addCommand) {
-                            Text("Add Command")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
-                        .disabled(!isFormValid)
-                        .padding(.top, 16)
+                        // Add some bottom spacing for the fixed button
+                        Spacer()
+                            .frame(height: 40)
                     }
-                    .padding(24)
+                    .padding(14)
                 }
             }
+            
+            // Fixed bottom button area
+            VStack(spacing: 0) {
+                Divider()
+                
+                Button(action: addCommand) {
+                    Text("Add Command")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(!isFormValid)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
+                .background(Color(.windowBackgroundColor))
+            }
         }
-        .frame(width: 600, height: 600)
+        .frame(width: 600, height: 800)
         .background(Color(.windowBackgroundColor))
         .onAppear {
             loadApps()
@@ -243,7 +255,7 @@ struct AddCommandActionTypeButton: View {
                 Text(type.rawValue)
                     .font(.system(size: 14, weight: .medium))
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 4)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
             .background(
@@ -301,7 +313,7 @@ struct AppSelectionView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                 )
-                .frame(height: 200)
+                .frame(height: 320)
             }
             
             if let app = selectedApp {
@@ -382,11 +394,29 @@ struct AppIcon: View {
 struct KeyboardShortcutView: View {
     @Binding var selectedModifiers: Set<KeyModifier>
     @Binding var selectedKey: String
+    @Binding var capturedShortcut: String
     @State private var isListening = false
-    @State private var capturedShortcut: String = ""
+    @State private var showManualBuilder = true
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            // Preview of the shortcut - Moved to the top for better visibility
+            if !selectedKey.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "keyboard")
+                        .foregroundColor(.accentColor)
+                    
+                    Text("Shortcut: \(capturedShortcut.isEmpty ? buildShortcutString() : capturedShortcut)")
+                        .font(.system(size: 14, weight: .medium))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.accentColor.opacity(0.1))
+                )
+            }
+            
             VStack(alignment: .leading, spacing: 8) {
                 Text("Press Keyboard Shortcut")
                     .font(.system(size: 14, weight: .medium))
@@ -403,23 +433,271 @@ struct KeyboardShortcutView: View {
                     .foregroundColor(.secondary)
             }
             
-            // Preview of the shortcut
-            if !selectedKey.isEmpty {
-                HStack(spacing: 12) {
-                    Image(systemName: "keyboard")
-                        .foregroundColor(.accentColor)
-                    
-                    Text("Shortcut: \(capturedShortcut.isEmpty ? selectedKey : capturedShortcut)")
+            // Divider with "OR" text
+            HStack {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 1)
+                
+                Text("OR")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 16)
+                
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 1)
+            }
+            .padding(.vertical, 8)
+            
+            // Manual Key Combination Builder
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Build Key Combination Manually")
                         .font(.system(size: 14, weight: .medium))
+                    
+                    Spacer()
+                    
+                    Button(showManualBuilder ? "Hide Builder" : "Show Builder") {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showManualBuilder.toggle()
+                        }
+                    }
+                    .font(.system(size: 12))
+                    .foregroundColor(.accentColor)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.accentColor.opacity(0.1))
-                )
+                
+                Text("Use this when macOS intercepts your key combination")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                
+                if showManualBuilder {
+                    ManualKeyBuilderView(
+                        selectedModifiers: $selectedModifiers,
+                        selectedKey: $selectedKey,
+                        capturedShortcut: $capturedShortcut
+                    )
+                }
             }
         }
+    }
+    
+    private func buildShortcutString() -> String {
+        let modifierSymbols = selectedModifiers.sorted { $0.rawValue < $1.rawValue }.map { $0.symbol }
+        let modifierString = modifierSymbols.joined()
+        
+        // Map key names to user-friendly symbols for display
+        let displayKey: String
+        switch selectedKey.lowercased() {
+        case "left": displayKey = "←"
+        case "right": displayKey = "→"
+        case "up": displayKey = "↑"
+        case "down": displayKey = "↓"
+        case "space": displayKey = "Space"
+        case "return": displayKey = "↩"
+        case "tab": displayKey = "⇥"
+        case "delete": displayKey = "⌫"
+        case "escape": displayKey = "⎋"
+        default: displayKey = selectedKey
+        }
+        
+        return modifierString + displayKey
+    }
+    
+    private func updateCapturedShortcut() {
+        capturedShortcut = buildShortcutString()
+    }
+}
+
+struct ManualKeyBuilderView: View {
+    @Binding var selectedModifiers: Set<KeyModifier>
+    @Binding var selectedKey: String
+    @Binding var capturedShortcut: String
+    
+    let availableKeys = [
+        // Function Keys
+        "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+        // Letters
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", 
+        "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+        // Numbers
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+        // Arrow Keys (using names that match VoiceCommandExecutor)
+        "Left", "Right", "Up", "Down",
+        // Special Keys
+        "Space", "Return", "Tab", "Delete", "Escape", "Home", "End", "Page Up", "Page Down"
+    ]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Modifier Selection
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Select Modifiers")
+                    .font(.system(size: 13, weight: .medium))
+                
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
+                    ForEach(KeyModifier.allCases, id: \.self) { modifier in
+                        ModifierToggleButton(
+                            modifier: modifier,
+                            isSelected: selectedModifiers.contains(modifier),
+                            onToggle: {
+                                if selectedModifiers.contains(modifier) {
+                                    selectedModifiers.remove(modifier)
+                                } else {
+                                    selectedModifiers.insert(modifier)
+                                }
+                                updateCapturedShortcut()
+                            }
+                        )
+                    }
+                }
+            }
+            
+            // Key Selection
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Select Key")
+                    .font(.system(size: 13, weight: .medium))
+                
+                Menu {
+                    ForEach(availableKeys, id: \.self) { key in
+                        Button(key) {
+                            selectedKey = key.lowercased()
+                            updateCapturedShortcut()
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(selectedKey.isEmpty ? "Choose a key..." : (availableKeys.first { $0.lowercased() == selectedKey } ?? selectedKey))
+                            .foregroundColor(selectedKey.isEmpty ? .secondary : .primary)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.down")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 12))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.controlBackgroundColor))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            
+            // Preview of manually built shortcut
+            if !selectedKey.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Preview")
+                        .font(.system(size: 13, weight: .medium))
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "keyboard.badge.ellipsis")
+                            .foregroundColor(.green)
+                        
+                        Text(buildShortcutString())
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.green)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.green.opacity(0.1))
+                    )
+                }
+            }
+            
+            // Clear button
+            if !selectedKey.isEmpty || !selectedModifiers.isEmpty {
+                Button(action: clearSelection) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "xmark.circle")
+                        Text("Clear Selection")
+                    }
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.controlBackgroundColor).opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
+    }
+    
+    private func buildShortcutString() -> String {
+        let modifierSymbols = selectedModifiers.sorted { $0.rawValue < $1.rawValue }.map { $0.symbol }
+        let modifierString = modifierSymbols.joined()
+        
+        // Map key names to user-friendly symbols for display
+        let displayKey: String
+        switch selectedKey.lowercased() {
+        case "left": displayKey = "←"
+        case "right": displayKey = "→"
+        case "up": displayKey = "↑"
+        case "down": displayKey = "↓"
+        case "space": displayKey = "Space"
+        case "return": displayKey = "↩"
+        case "tab": displayKey = "⇥"
+        case "delete": displayKey = "⌫"
+        case "escape": displayKey = "⎋"
+        default: displayKey = selectedKey
+        }
+        
+        return modifierString + displayKey
+    }
+    
+    private func updateCapturedShortcut() {
+        capturedShortcut = buildShortcutString()
+    }
+    
+    private func clearSelection() {
+        selectedModifiers.removeAll()
+        selectedKey = ""
+        capturedShortcut = ""
+    }
+}
+
+struct ModifierToggleButton: View {
+    let modifier: KeyModifier
+    let isSelected: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 6) {
+                Text(modifier.symbol)
+                    .font(.system(size: 12, weight: .bold))
+                
+                Text(modifier.displayName)
+                    .font(.system(size: 12))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.accentColor : Color(.controlBackgroundColor))
+            )
+            .foregroundColor(isSelected ? .white : .primary)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? Color.clear : Color.gray.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -776,7 +1054,7 @@ class KeyCaptureView: NSView {
             98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12",
             
             // Arrow keys - these are the most important for your use case
-            123: "←", 124: "→", 125: "↓", 126: "↑",
+            123: "Left", 124: "Right", 125: "Down", 126: "Up",
             
             // Navigation keys
             115: "Home", 119: "End", 116: "Page Up", 121: "Page Down",
@@ -1074,5 +1352,5 @@ struct ExampleCommandButton: View {
             .padding()
         }
     }
-    .frame(width: 500, height: 600)
+    .frame(width: 500, height: 700)
 } 
