@@ -10,6 +10,8 @@ import KeyboardShortcuts
 import SwiftUI
 import UniformTypeIdentifiers
 import AppKit
+import Foundation
+import Combine
 
 @MainActor
 class ContentViewModel: ObservableObject {
@@ -19,6 +21,7 @@ class ContentViewModel: ObservableObject {
     @Published var transcriptionService = TranscriptionService.shared
     @Published var recordingStore = RecordingStore.shared
     @Published var recordingDuration: TimeInterval = 0
+    @Published var voiceCommandProcessor = VoiceCommandProcessor.shared
 
     private var blinkTimer: Timer?
     private var recordingStartTime: Date?
@@ -66,6 +69,13 @@ class ContentViewModel: ObservableObject {
                     print("start decoding...")
                     let text = try await transcriptionService.transcribeAudio(url: tempURL, settings: Settings())
 
+                    // Check if this is a voice command
+                    let isVoiceCommand = await voiceCommandProcessor.processTranscription(text)
+                    
+                    // If it's a voice command and we're set to prevent normal transcription, don't save it
+                    let shouldSaveTranscription = !isVoiceCommand || !AppPreferences.shared.voiceCommandsPreventNormalTranscription
+                    
+                    if shouldSaveTranscription {
                     // Capture the current recording duration
                     let duration = await MainActor.run { self.recordingDuration }
                     
@@ -95,6 +105,11 @@ class ContentViewModel: ObservableObject {
                     }
 
                     print("Transcription result: \(text)")
+                    } else {
+                        // Voice command was executed, clean up the temp file
+                        try? FileManager.default.removeItem(at: tempURL)
+                        print("Voice command executed, transcription not saved")
+                    }
                 } catch {
                     print("Error transcribing audio: \(error)")
                     try? FileManager.default.removeItem(at: tempURL)
@@ -472,8 +487,7 @@ struct CleanNoteCard: View {
                         }
                     },
                     onCopy: {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(recording.transcription, forType: .string)
+                        ClipboardUtil.setLatestTranscription(recording.transcription)
                     },
                     onDelete: {
                         if isPlaying { audioRecorder.stopPlaying() }

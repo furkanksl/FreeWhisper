@@ -62,13 +62,9 @@ class IndicatorWindowManager: IndicatorViewDelegate {
             
             // Store reference to window
             self.window = window
-            
-            // Make it key and order front
-            window.makeKeyAndOrderFront(nil)
-            window.orderFrontRegardless()
         }
         
-        // Position window (this will use saved position if available)
+        // Position window BEFORE making it visible
         positionWindow(at: point)
         
         // Make the window visible and bring to front
@@ -101,16 +97,17 @@ class IndicatorWindowManager: IndicatorViewDelegate {
         
         print("IndicatorWindowManager: Stored position - X: \(storedX), Y: \(storedY), UseNotch: \(shouldPositionNearNotch)")
         
-        if storedX >= 0 && storedY >= 0 && !shouldPositionNearNotch {
-            // Use stored position
+        if let specificPoint = point {
+            // Always prioritize the provided point if one is given
+            // This ensures the window appears at the cursor/caret position when requested
+            x = specificPoint.x - (windowFrame.width / 2)
+            y = specificPoint.y - (windowFrame.height / 2)
+            print("IndicatorWindowManager: Using provided point: \(specificPoint)")
+        } else if storedX >= 0 && storedY >= 0 && !shouldPositionNearNotch {
+            // Use stored position only if no specific point is provided
             x = storedX
             y = storedY
             print("IndicatorWindowManager: Using stored position")
-        } else if let point = point {
-            // Use provided point
-            x = point.x - (windowFrame.width / 2)
-            y = point.y - (windowFrame.height / 2)
-            print("IndicatorWindowManager: Using provided point")
         } else {
             // Default position: center top 
             // Note: Screen coordinates in macOS have (0,0) at bottom left
@@ -122,8 +119,10 @@ class IndicatorWindowManager: IndicatorViewDelegate {
             let screenSize = screenFrame.size
             print("IndicatorWindowManager: Screen frame - Origin: (\(screenOrigin.x), \(screenOrigin.y)), Size: \(screenSize.width) x \(screenSize.height)")
             print("IndicatorWindowManager: Window size - \(windowFrame.width) x \(windowFrame.height)")
-            print("IndicatorWindowManager: Calculated position - X: \(x), Y: \(y)")
+            print("IndicatorWindowManager: Using default position")
         }
+        
+        print("IndicatorWindowManager: Calculated position - X: \(x), Y: \(y)")
         
         // Ensure window stays within screen bounds
         x = max(screenFrame.origin.x, min(x, screenFrame.origin.x + screenFrame.width - windowFrame.width))
@@ -217,8 +216,13 @@ class IndicatorWindowManager: IndicatorViewDelegate {
             
             await viewModel.hideWithAnimation()
             
+            // Make sure to properly clean up the window
             self.window?.orderOut(nil)
             self.viewModel = nil
+            
+            // Release the window reference to ensure it gets recreated next time
+            // This fixes the issue where the window doesn't appear after using escape
+            self.window = nil
         }
     }
     

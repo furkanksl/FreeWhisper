@@ -5,18 +5,22 @@ import Foundation
 enum Permission {
     case microphone
     case accessibility
+    case automation
 }
 
 class PermissionsManager: ObservableObject {
     @Published var isMicrophonePermissionGranted = false
     @Published var isAccessibilityPermissionGranted = false
+    @Published var isAutomationPermissionGranted = false
 
     private var permissionCheckTimer: Timer?
     private var lastAccessibilityStatus = false
+    private var lastAutomationStatus = false
 
     init() {
         checkMicrophonePermission()
         checkAccessibilityPermission()
+        checkAutomationPermission()
 
         // Monitor accessibility permission changes using NSWorkspace's notification center
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -49,6 +53,7 @@ class PermissionsManager: ObservableObject {
         permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.checkMicrophonePermission()
             self?.checkAccessibilityPermission()
+            self?.checkAutomationPermission()
         }
     }
 
@@ -100,6 +105,23 @@ class PermissionsManager: ObservableObject {
             }
         }
     }
+    
+    func checkAutomationPermission() {
+        // Test automation permission by attempting to run a harmless AppleScript
+        let script = NSAppleScript(source: "tell application \"System Events\" to return name of first process")
+        var errorInfo: NSDictionary?
+        let result = script?.executeAndReturnError(&errorInfo)
+        
+        let hasPermission = (result != nil && errorInfo == nil)
+        
+        // Only update if there's a change to avoid unnecessary UI updates
+        if hasPermission != lastAutomationStatus {
+            lastAutomationStatus = hasPermission
+            DispatchQueue.main.async { [weak self] in
+                self?.isAutomationPermissionGranted = hasPermission
+            }
+        }
+    }
 
     func requestMicrophonePermissionOrOpenSystemPreferences() {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
@@ -117,6 +139,26 @@ class PermissionsManager: ObservableObject {
             openSystemPreferences(for: .microphone)
         }
     }
+    
+    func requestAutomationPermission() {
+        // Prompt for automation permission by running a harmless AppleScript
+        let script = NSAppleScript(source: """
+            tell application "System Events"
+                display dialog "FreeWhisper needs permission to control System Events for keyboard shortcuts." buttons {"OK"} default button "OK" with title "Automation Permission"
+                return name of first process
+            end tell
+        """)
+        
+        var errorInfo: NSDictionary?
+        script?.executeAndReturnError(&errorInfo)
+        
+        // Check if we got permission or if we need to direct to System Preferences
+        if errorInfo != nil {
+            openSystemPreferences(for: .automation)
+        } else {
+            checkAutomationPermission()
+        }
+    }
 
     @objc private func accessibilityPermissionChanged() {
         checkAccessibilityPermission()
@@ -128,7 +170,9 @@ class PermissionsManager: ObservableObject {
         
         // Reset last status to force update
         lastAccessibilityStatus = false
+        lastAutomationStatus = false
         checkAccessibilityPermission()
+        checkAutomationPermission()
     }
 
     func openSystemPreferences(for permission: Permission) {
@@ -137,8 +181,9 @@ class PermissionsManager: ObservableObject {
         case .microphone:
             urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
         case .accessibility:
-            urlString =
-                "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        case .automation:
+            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
         }
 
         if let url = URL(string: urlString) {

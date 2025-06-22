@@ -19,8 +19,10 @@ class OnboardingViewModel: ObservableObject {
     @Published var models: [DownloadableModel]
     @Published var isDownloadingAny: Bool = false
     @Published var currentStep: OnboardingStep = .welcome
+    @Published var arePermissionsGranted: Bool = false
 
     private let modelManager = WhisperModelManager.shared
+    private let permissionsManager = PermissionsManager()
 
     init() {
         let systemLanguage = LanguageUtil.getSystemLanguage()
@@ -32,6 +34,9 @@ class OnboardingViewModel: ObservableObject {
         if let defaultModel = models.first(where: { $0.name == "Turbo V3 large" }) {
             self.selectedModel = defaultModel
         }
+        
+        // Check permissions status
+        checkPermissions()
     }
 
     private func initializeModels() {
@@ -41,6 +46,16 @@ class OnboardingViewModel: ObservableObject {
             updatedModel.isDownloaded = modelManager.isModelDownloaded(name: model.name)
             return updatedModel
         }
+    }
+
+    private func checkPermissions() {
+        permissionsManager.checkMicrophonePermission()
+        permissionsManager.checkAccessibilityPermission()
+        permissionsManager.checkAutomationPermission()
+        
+        arePermissionsGranted = permissionsManager.isMicrophonePermissionGranted && 
+                               permissionsManager.isAccessibilityPermissionGranted &&
+                               permissionsManager.isAutomationPermissionGranted
     }
 
     @MainActor
@@ -90,6 +105,8 @@ class OnboardingViewModel: ObservableObject {
             case .welcome:
                 currentStep = .language
             case .language:
+                currentStep = .permissions
+            case .permissions:
                 currentStep = .model
             case .model:
                 break // Handled in the view
@@ -104,8 +121,10 @@ class OnboardingViewModel: ObservableObject {
                 break
             case .language:
                 currentStep = .welcome
-            case .model:
+            case .permissions:
                 currentStep = .language
+            case .model:
+                currentStep = .permissions
             }
         }
     }
@@ -114,12 +133,14 @@ class OnboardingViewModel: ObservableObject {
 enum OnboardingStep: Int, CaseIterable {
     case welcome = 0
     case language = 1
-    case model = 2
+    case permissions = 2
+    case model = 3
     
     var title: String {
         switch self {
         case .welcome: return "Welcome"
         case .language: return "Language"
+        case .permissions: return "Permissions"
         case .model: return "Model"
         }
     }
@@ -194,6 +215,8 @@ struct OnboardingView: View {
             WelcomeStepView()
         case .language:
             LanguageStepView(viewModel: viewModel)
+        case .permissions:
+            PermissionsStepView()
         case .model:
             ModelStepView(viewModel: viewModel)
         }
@@ -202,6 +225,8 @@ struct OnboardingView: View {
     private func handleNextButtonTap() {
         switch viewModel.currentStep {
         case .welcome, .language:
+            viewModel.nextStep()
+        case .permissions:
             viewModel.nextStep()
         case .model:
             guard let selectedModel = viewModel.selectedModel else { return }
@@ -396,6 +421,128 @@ struct LanguageStepView: View {
                 )
         )
         .frame(width: 320)
+    }
+}
+
+struct PermissionsStepView: View {
+    @StateObject private var permissionsManager = PermissionsManager()
+    
+    var body: some View {
+        VStack(spacing: 40) {
+            Spacer()
+            
+            OnboardingCard(
+                icon: "hand.raised.fill",
+                iconColor: .blue,
+                title: "Permissions",
+                subtitle: "Grant necessary permissions for the app"
+            ) {
+                permissionsContent
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 60)
+    }
+    
+    private var permissionsContent: some View {
+        VStack(spacing: 24) {
+            Text("FreeWhisper needs the following permissions to function properly:")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 8)
+            
+            // Microphone Permission
+            PermissionRowView(
+                icon: Aline Wright"mic.fill",
+                title: "Microphone",
+                description: "For recording audio to transcribe",
+                isGranted: permissionsManager.isMicrophonePermissionGranted,
+                action: { permissionsManager.requestMicrophonePermissionOrOpenSystemPreferences() }
+            )
+            
+            // Accessibility Permission
+            PermissionRowView(
+                icon: "accessibility",
+                title: "Accessibility",
+                description: "For global keyboard shortcuts",
+                isGranted: permissionsManager.isAccessibilityPermissionGranted,
+                action: { permissionsManager.openSystemPreferences(for: .accessibility) }
+            )
+            
+            // Automation Permission
+            PermissionRowView(
+                icon: "keyboard",
+                title: "Automation",
+                description: "For executing keyboard shortcuts",
+                isGranted: permissionsManager.isAutomationPermissionGranted,
+                action: { permissionsManager.requestAutomationPermission() }
+            )
+            
+            Text("You can change these permissions later in System Settings")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .padding(.top, 8)
+        }
+    }
+}
+
+struct PermissionRowView: View {
+    let icon: String
+    let title: String
+    let description: String
+    let isGranted: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(isGranted ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(isGranted ? .green : .orange)
+            }
+            
+            // Text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Text(description)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // Status/Button
+            if isGranted {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.green)
+            } else {
+                Button("Grant") {
+                    action()
+                }
+                .buttonStyle(OnboardingSecondaryButtonStyle())
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.controlBackgroundColor).opacity(0.8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isGranted ? Color.green.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: isGranted ? 1.5 : 1)
+                )
+        )
     }
 }
 
@@ -626,6 +773,8 @@ struct OnboardingFooter: View {
         switch viewModel.currentStep {
         case .welcome, .language:
             return true
+        case .permissions:
+            return true
         case .model:
             return viewModel.selectedModel != nil && !viewModel.isDownloadingAny
         }
@@ -635,6 +784,8 @@ struct OnboardingFooter: View {
         switch viewModel.currentStep {
         case .welcome, .language:
             return "Continue"
+        case .permissions:
+            return viewModel.arePermissionsGranted ? "Continue" : "Continue Anyway"
         case .model:
             if let model = viewModel.selectedModel {
                 return model.isDownloaded ? "Get Started" : "Download & Continue"
@@ -735,7 +886,7 @@ struct OnboardingCard<Content: View>: View {
                         .stroke(iconColor.opacity(0.3), lineWidth: 2)
                 )
             
-            Image(systemName: "translate")
+            Image(systemName: icon)
                 .font(.system(size: 24, weight: .medium))
                 .foregroundColor(iconColor)
         }
