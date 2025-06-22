@@ -98,6 +98,223 @@ class VoiceCommandExecutor: ObservableObject {
     // MARK: - Keyboard Shortcut Execution
     
     private func executeKeyboardShortcut(_ keyCombo: KeyCombination) throws {
+        // Check if this is a system shortcut that might be intercepted
+        if isLikelySystemShortcut(keyCombo) {
+            // Use AppleScript for system shortcuts to bypass interception
+            try executeViaAppleScript(keyCombo)
+        } else {
+            // Use the standard CGEvent approach for other shortcuts
+            try executeViaCGEvent(keyCombo)
+        }
+    }
+    
+    private func isLikelySystemShortcut(_ keyCombo: KeyCombination) -> Bool {
+        // Special case for Control+Arrow keys which are commonly used for switching desktops
+        let isControlArrow = keyCombo.modifiers.count == 1 && 
+                            keyCombo.modifiers.contains(.control) && 
+                            ["left", "right"].contains(keyCombo.key.lowercased())
+        
+        if isControlArrow {
+            return true
+        }
+        
+        // Check for common system shortcuts that get intercepted
+        let systemModifierCombos: [[KeyModifier]] = [
+            [.command, .shift], // Command + Shift combinations
+            [.command, .option], // Command + Option combinations
+            [.control, .option], // Control + Option combinations
+            [.function] // Function key combinations
+        ]
+        
+        // Check for navigation keys that are often intercepted
+        let navigationKeys = ["left", "right", "up", "down", "home", "end", "pageup", "pagedown"]
+        
+        // Check if this is a likely system shortcut
+        let hasSystemModifiers = systemModifierCombos.contains { combo in
+            Set(combo).isSubset(of: Set(keyCombo.modifiers))
+        }
+        
+        let isNavigationKey = navigationKeys.contains(keyCombo.key.lowercased())
+        
+        return hasSystemModifiers || isNavigationKey
+    }
+    
+    private func executeViaAppleScript(_ keyCombo: KeyCombination) throws {
+        // Special case for Control+Arrow keys (desktop switching)
+        let isControlArrow = keyCombo.modifiers.count == 1 && 
+                            keyCombo.modifiers.contains(.control) && 
+                            ["left", "right"].contains(keyCombo.key.lowercased())
+        
+        if isControlArrow {
+            let direction = keyCombo.key.lowercased()
+            let scriptCommand = """
+            tell application "System Events"
+                key down control
+                key code \(direction == "left" ? "123" : "124")
+                delay 0.1
+                key up control
+            end tell
+            """
+            
+            print("Executing desktop switch via AppleScript: \(scriptCommand)")
+            
+            let script = NSAppleScript(source: scriptCommand)
+            var errorInfo: NSDictionary?
+            script?.executeAndReturnError(&errorInfo)
+            
+            if let error = errorInfo {
+                throw VoiceCommandError.shellExecutionFailed("AppleScript error: \(error)")
+            }
+            
+            return
+        }
+        
+        // Special case for fullscreen command (Control+Option+Return)
+        let isFullscreenCommand = keyCombo.modifiers.contains(.control) && 
+                                 keyCombo.modifiers.contains(.option) && 
+                                 keyCombo.key.lowercased() == "return"
+        
+        if isFullscreenCommand {
+            let scriptCommand = """
+            tell application "System Events"
+                key down control
+                key down option
+                keystroke return
+                delay 0.5
+                key up option
+                key up control
+            end tell
+            """
+            
+            print("Executing fullscreen command via AppleScript: \(scriptCommand)")
+            
+            let script = NSAppleScript(source: scriptCommand)
+            var errorInfo: NSDictionary?
+            script?.executeAndReturnError(&errorInfo)
+            
+            if let error = errorInfo {
+                throw VoiceCommandError.shellExecutionFailed("AppleScript error: \(error)")
+            }
+            
+            // Add a delay to prevent conflicts with other commands
+            Thread.sleep(forTimeInterval: 0.5)
+            
+            return
+        }
+        
+        // Convert modifiers to AppleScript format
+        var modifierStrings: [String] = []
+        
+        for modifier in keyCombo.modifiers {
+            switch modifier {
+            case .command:
+                modifierStrings.append("command down")
+            case .option:
+                modifierStrings.append("option down")
+            case .control:
+                modifierStrings.append("control down")
+            case .shift:
+                modifierStrings.append("shift down")
+            case .function:
+                // Function key is handled differently
+                continue
+            }
+        }
+        
+        // Convert key to AppleScript format
+        let keyString: String
+        switch keyCombo.key.lowercased() {
+        case "left":
+            keyString = "left arrow"
+        case "right":
+            keyString = "right arrow"
+        case "up":
+            keyString = "up arrow"
+        case "down":
+            keyString = "down arrow"
+        case "return":
+            keyString = "return"
+        case "space":
+            keyString = "space"
+        case "tab":
+            keyString = "tab"
+        case "delete", "backspace":
+            keyString = "delete"
+        case "escape", "esc":
+            keyString = "escape"
+        case "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12":
+            keyString = keyCombo.key.lowercased()
+        default:
+            keyString = keyCombo.key.lowercased()
+        }
+        
+        // Build the AppleScript command
+        let modifiersString = modifierStrings.isEmpty ? "" : "using {" + modifierStrings.joined(separator: ", ") + "} "
+        
+        // Use key stroke for regular keys and key code for special keys
+        let scriptCommand: String
+        if ["left arrow", "right arrow", "up arrow", "down arrow"].contains(keyString) {
+            // For arrow keys, use key code
+            let arrowKeyCode: String
+            switch keyString {
+            case "left arrow": arrowKeyCode = "123"
+            case "right arrow": arrowKeyCode = "124"
+            case "up arrow": arrowKeyCode = "126"
+            case "down arrow": arrowKeyCode = "125"
+            default: arrowKeyCode = "0"
+            }
+            
+            scriptCommand = """
+            tell application "System Events"
+                key code \(arrowKeyCode) \(modifiersString)
+            end tell
+            """
+        } else if keyString.hasPrefix("f") && Int(keyString.dropFirst()) != nil {
+            // For function keys, use key code
+            let functionKeyCode: String
+            switch keyString {
+            case "f1": functionKeyCode = "122"
+            case "f2": functionKeyCode = "120"
+            case "f3": functionKeyCode = "99"
+            case "f4": functionKeyCode = "118"
+            case "f5": functionKeyCode = "96"
+            case "f6": functionKeyCode = "97"
+            case "f7": functionKeyCode = "98"
+            case "f8": functionKeyCode = "100"
+            case "f9": functionKeyCode = "101"
+            case "f10": functionKeyCode = "109"
+            case "f11": functionKeyCode = "103"
+            case "f12": functionKeyCode = "111"
+            default: functionKeyCode = "0"
+            }
+            
+            scriptCommand = """
+            tell application "System Events"
+                key code \(functionKeyCode) \(modifiersString)
+            end tell
+            """
+        } else {
+            // For regular keys, use keystroke
+            scriptCommand = """
+            tell application "System Events"
+                keystroke "\(keyString)" \(modifiersString)
+            end tell
+            """
+        }
+        
+        print("Executing via AppleScript: \(scriptCommand)")
+        
+        // Execute the AppleScript
+        let script = NSAppleScript(source: scriptCommand)
+        var errorInfo: NSDictionary?
+        script?.executeAndReturnError(&errorInfo)
+        
+        if let error = errorInfo {
+            throw VoiceCommandError.shellExecutionFailed("AppleScript error: \(error)")
+        }
+    }
+    
+    private func executeViaCGEvent(_ keyCombo: KeyCombination) throws {
         guard let keyCode = keyCodeForString(keyCombo.key) else {
             throw VoiceCommandError.invalidKeyCode(keyCombo.key)
         }
